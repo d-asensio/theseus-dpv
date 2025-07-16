@@ -10,13 +10,20 @@
 
 #define ENCODER_CALIBRATION_MIN_VALUE 198
 #define ENCODER_CALIBRATION_MAX_VALUE 27895
+#define ENCODER_DIRECTION -1
+#define ENCODER_DELTA_MIN_RESOLTUION 10
 
+#define BLCD_ODRIVE_AXIS 0
 #define BLCD_MAX_TORQUE 1.59
-
-static const int  kAxis = 0;
+#define BLCD_MIN_VELOCITY 8
+#define BLCD_STARTUP_VELOCITY 30
+#define BLCD_MAX_VELOCITY 60
 
 HardwareSerial ODriveSerial(1);
 Adafruit_ADS1115 ads;
+
+int16_t blcd_velocity_setpoint = BLCD_STARTUP_VELOCITY;
+int16_t current_encoder_angle = 0;
 
 void sendVelocity(int16_t velocity, float torqueFF = 0.0f)
 {
@@ -29,12 +36,43 @@ void sendVelocity(int16_t velocity, float torqueFF = 0.0f)
   dtostrf(torqueFF, 0, 4, tBuf);
 
   ODriveSerial.print("v ");
-  ODriveSerial.print(kAxis);
+  ODriveSerial.print(BLCD_ODRIVE_AXIS);
   ODriveSerial.print(' ');
   ODriveSerial.print(vBuf);
   ODriveSerial.print(' ');
   ODriveSerial.print(tBuf);
   ODriveSerial.print('\n');
+}
+
+int16_t read_encoder_rotation_angle () {
+  int16_t analog_value = ads.readADC_SingleEnded(0);
+
+  return map(
+    analog_value,
+    ENCODER_CALIBRATION_MIN_VALUE,
+    ENCODER_CALIBRATION_MAX_VALUE,
+    0,
+    360
+  );
+}
+
+
+int16_t get_angle_delta (int16_t current_angle, int16_t new_angle) {
+  if (current_angle <= 180 && new_angle >= 180) {
+    return 0;
+  }
+
+  if (current_angle >= 180 && new_angle <= 180) {
+    return 0;
+  }
+
+  int16_t encoder_rotation_angle_delta = (current_angle - new_angle) * ENCODER_DIRECTION;
+
+  if (abs(encoder_rotation_angle_delta) < ENCODER_DELTA_MIN_RESOLTUION) {
+    encoder_rotation_angle_delta = 0;
+  }
+
+  return encoder_rotation_angle_delta;
 }
 
 void setup()
@@ -58,18 +96,8 @@ void setup()
 
   pinMode(TRIGGER_SWITCH_PIN, INPUT_PULLDOWN);
   pinMode(REVERSE_SWITCH_PIN, INPUT_PULLDOWN);
-}
 
-int16_t read_encoder_rotation_angle () {
-  int16_t analog_value = ads.readADC_SingleEnded(0);
-
-  return map(
-    analog_value,
-    ENCODER_CALIBRATION_MIN_VALUE,
-    ENCODER_CALIBRATION_MAX_VALUE,
-    0,
-    360
-  );
+  current_encoder_angle = read_encoder_rotation_angle();
 }
 
 void loop()
@@ -80,10 +108,23 @@ void loop()
 
 
   // Read encoder value
-  int16_t current_encoder_rotation_angle = read_encoder_rotation_angle();
+  int16_t new_encoder_angle = read_encoder_rotation_angle();
 
-  Serial.print("Encoder rotation angle: ");
-  Serial.println(current_encoder_rotation_angle);
+  // When transition from x<=90 to >=270
+  // When transition from x>=270 to x<=90
+  
+  int16_t encoder_rotation_angle_delta = get_angle_delta(current_encoder_angle, new_encoder_angle);
+
+  current_encoder_angle = new_encoder_angle;
+
+  Serial.println("-- Encoder --");
+  Serial.print("Rotation angle: ");
+  Serial.println(new_encoder_angle);
+  Serial.print("Delta: ");
+  Serial.println(encoder_rotation_angle_delta);
+  Serial.print("Quadrant: ");
+  Serial.println();
+  Serial.println("-------------");
 
   const int triggerPressed = digitalRead(TRIGGER_SWITCH_PIN);
   Serial.print("Trigger: ");
