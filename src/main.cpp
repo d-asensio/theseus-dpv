@@ -11,12 +11,14 @@
 #define ENCODER_CALIBRATION_MIN_VALUE 198
 #define ENCODER_CALIBRATION_MAX_VALUE 27895
 
+#define BLCD_MAX_TORQUE 1.59
+
 static const int  kAxis = 0;
 
 HardwareSerial ODriveSerial(1);
 Adafruit_ADS1115 ads;
 
-void sendVelocity(float velocity, float torqueFF = 0.0f)
+void sendVelocity(int16_t velocity, float torqueFF = 0.0f)
 {
   /* Build the line:
      "v <axis> <velocity> <torqueFF>\n"
@@ -73,8 +75,8 @@ int16_t read_encoder_rotation_angle () {
 void loop()
 {
   // Set motor speed
-  float targetRps = 20;
-  sendVelocity(targetRps, 1.59);
+  int16_t targetRps = 20;
+  sendVelocity(targetRps, BLCD_MAX_TORQUE);
 
 
   // Read encoder value
