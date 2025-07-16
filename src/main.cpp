@@ -122,8 +122,6 @@ void loop()
   Serial.println(new_encoder_angle);
   Serial.print("Delta: ");
   Serial.println(encoder_rotation_angle_delta);
-  Serial.print("Quadrant: ");
-  Serial.println();
   Serial.println("-------------");
 
   const int triggerPressed = digitalRead(TRIGGER_SWITCH_PIN);
