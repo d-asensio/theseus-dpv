@@ -8,6 +8,9 @@
 #define TRIGGER_SWITCH_PIN  10
 #define REVERSE_SWITCH_PIN  7
 
+#define ENCODER_CALIBRATION_MIN_VALUE 198
+#define ENCODER_CALIBRATION_MAX_VALUE 27895
+
 static const int  kAxis = 0;
 
 HardwareSerial ODriveSerial(1);
@@ -55,6 +58,18 @@ void setup()
   pinMode(REVERSE_SWITCH_PIN, INPUT_PULLDOWN);
 }
 
+int16_t read_encoder_rotation_angle () {
+  int16_t analog_value = ads.readADC_SingleEnded(0);
+
+  return map(
+    analog_value,
+    ENCODER_CALIBRATION_MIN_VALUE,
+    ENCODER_CALIBRATION_MAX_VALUE,
+    0,
+    360
+  );
+}
+
 void loop()
 {
   // Set motor speed
@@ -63,13 +78,10 @@ void loop()
 
 
   // Read encoder value
+  int16_t current_encoder_rotation_angle = read_encoder_rotation_angle();
 
-  float multiplier = 0.1875F; /* ADS1115  @ +/- 6.144V gain (16-bit results) */
-
-  int16_t results = ads.readADC_SingleEnded(0);
-
-  Serial.print("Differential: "); Serial.print(results); Serial.print("("); Serial.print(results * multiplier); Serial.println("mV)");
-
+  Serial.print("Encoder rotation angle: ");
+  Serial.println(current_encoder_rotation_angle);
 
   const int triggerPressed = digitalRead(TRIGGER_SWITCH_PIN);
   Serial.print("Trigger: ");
@@ -79,7 +91,7 @@ void loop()
   Serial.print("Reverse: ");
   Serial.println(reversePressed);
 
-  delay(1000);
+  delay(300);
 
   // while (ODriveSerial.available())
   //   Serial.write(ODriveSerial.read());
