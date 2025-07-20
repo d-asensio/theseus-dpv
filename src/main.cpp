@@ -22,9 +22,13 @@
 #define BLCD_MAX_VELOCITY 50
 
 // EMI filtering and debouncing constants
-#define SWITCH_DEBOUNCE_TIME 50  // milliseconds
-#define SWITCH_FILTER_SAMPLES 5  // number of samples for filtering
-#define SWITCH_THRESHOLD 3       // minimum HIGH readings to confirm switch press
+#define TRIGGER_SWITCH_DEBOUNCE_TIME 50
+#define TRIGGER_SWITCH_FILTER_SAMPLES 5
+#define TRIGGER_SWITCH_THRESHOLD 3
+
+#define REVERSE_SWITCH_DEBOUNCE_TIME 50
+#define REVERSE_SWITCH_FILTER_SAMPLES 10
+#define REVERSE_SWITCH_THRESHOLD 5
 
 HardwareSerial ODriveSerial(1);
 Adafruit_ADS1115 ads;
@@ -33,8 +37,8 @@ int16_t blcd_velocity_setpoint = BLCD_STARTUP_VELOCITY;
 int16_t current_encoder_angle;
 
 // Create switch instances
-EMIFilterSwitch trigger_switch(SWITCH_DEBOUNCE_TIME, SWITCH_FILTER_SAMPLES, SWITCH_THRESHOLD);
-EMIFilterSwitch reverse_switch(SWITCH_DEBOUNCE_TIME, SWITCH_FILTER_SAMPLES, SWITCH_THRESHOLD);
+EMIFilterSwitch trigger_switch(TRIGGER_SWITCH_DEBOUNCE_TIME, TRIGGER_SWITCH_FILTER_SAMPLES, TRIGGER_SWITCH_THRESHOLD);
+EMIFilterSwitch reverse_switch(REVERSE_SWITCH_DEBOUNCE_TIME, REVERSE_SWITCH_FILTER_SAMPLES, REVERSE_SWITCH_THRESHOLD);
 
 void send_velocity_to_odrive(int16_t velocity, float torqueFF = 0.0f)
 {
@@ -142,30 +146,26 @@ void setup()
 
 void loop()
 {
+  // Update switch states
+  trigger_switch.loop();
+  reverse_switch.loop();
+
   int16_t new_encoder_angle = read_encoder_rotation_angle();
   int16_t encoder_rotation_angle_delta = get_angle_delta(current_encoder_angle, new_encoder_angle);
   int16_t blcd_velocity_delta = from_encoder_angle_delta_to_blcd_velocity_delta(encoder_rotation_angle_delta);
 
   blcd_velocity_setpoint += blcd_velocity_delta;
   blcd_velocity_setpoint = constrain(blcd_velocity_setpoint, BLCD_MIN_VELOCITY, BLCD_MAX_VELOCITY);
+  bool blcd_velocity_delta_changed = blcd_velocity_delta != 0;
 
-  // Update switch states
-  trigger_switch.loop();
-  reverse_switch.loop();
 
   // Get current filtered states
   int trigger_pressed = trigger_switch.read();
   int reverse_pressed = reverse_switch.read();
 
-  Serial.print("Trigger: ");
-  Serial.println(trigger_pressed);
-  Serial.print("Reverse: ");
-  Serial.println(reverse_pressed);
-
   // Check for state changes
   bool trigger_changed = trigger_switch.hasChanged();
   bool reverse_changed = reverse_switch.hasChanged();
-  bool blcd_velocity_delta_changed = blcd_velocity_delta != 0;
 
   if (trigger_changed || blcd_velocity_delta_changed)
   {
