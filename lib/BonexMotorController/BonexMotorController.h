@@ -1,5 +1,5 @@
-#ifndef MOTOR_CONTROLLER_H
-#define MOTOR_CONTROLLER_H
+#ifndef BONEX_MOTOR_CONTROLLER_H
+#define BONEX_MOTOR_CONTROLLER_H
 
 #include <Arduino.h>
 #include "logger.h"
@@ -7,7 +7,7 @@
 #include "EMIFilterSwitch.h"
 #include "RotationEncoder.h"
 
-class MotorController
+class BonexMotorController
 {
 private:
   logging::Logger *logger;
@@ -30,7 +30,7 @@ private:
   int16_t fromEncoderAngleDeltaToVelocityDelta(int16_t angle_delta);
 
 public:
-  MotorController(
+  BonexMotorController(
       logging::Logger *logger,
       ODrive *odrive,
       EMIFilterSwitch *trigger_switch,
@@ -41,4 +41,4 @@ public:
   void loop();
 };
 
-#endif // MOTOR_CONTROLLER_H
+#endif // BONEX_MOTOR_CONTROLLER_H

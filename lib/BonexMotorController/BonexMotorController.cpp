@@ -1,6 +1,6 @@
-#include "MotorController.h"
+#include "BonexMotorController.h"
 
-MotorController::MotorController(
+BonexMotorController::BonexMotorController(
     logging::Logger *logger,
     ODrive *odrive,
     EMIFilterSwitch *trigger_switch,
@@ -11,11 +11,11 @@ MotorController::MotorController(
 {
   if (logger)
   {
-    logger->log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "MotorController", "Initialized");
+    logger->log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BonexMotorController", "Initialized");
   }
 }
 
-void MotorController::setup(uint8_t axis_id, float max_torque, int16_t min_velocity, int16_t max_velocity, int16_t startup_velocity)
+void BonexMotorController::setup(uint8_t axis_id, float max_torque, int16_t min_velocity, int16_t max_velocity, int16_t startup_velocity)
 {
   this->axis_id = axis_id;
   this->max_torque = max_torque;
@@ -25,12 +25,12 @@ void MotorController::setup(uint8_t axis_id, float max_torque, int16_t min_veloc
 
   if (logger)
   {
-    logger->log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "MotorController", "Setup complete - axis: %d, max_torque: %.2f, velocity_range: %d-%d",
+    logger->log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BonexMotorController", "Setup complete - axis: %d, max_torque: %.2f, velocity_range: %d-%d",
                 axis_id, max_torque, min_velocity, max_velocity);
   }
 }
 
-void MotorController::loop()
+void BonexMotorController::loop()
 {
   // Update switch states
   trigger_switch->loop();
@@ -71,7 +71,7 @@ void MotorController::loop()
 }
 
 // Private helper method for converting encoder angle delta to velocity delta
-int16_t MotorController::fromEncoderAngleDeltaToVelocityDelta(int16_t angle_delta)
+int16_t BonexMotorController::fromEncoderAngleDeltaToVelocityDelta(int16_t angle_delta)
 {
   // Convert angle delta to velocity using the same logic as before
   int16_t abs_angle = abs(angle_delta);

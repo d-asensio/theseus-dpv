@@ -6,7 +6,7 @@
 #include "EMIFilterSwitch.h"
 #include "RotationEncoder.h"
 #include "ODrive.h"
-#include "MotorController.h"
+#include "BonexMotorController.h"
 
 #define LED_BUILTIN 8
 #define ODRIVE_RX_PIN 20
@@ -47,7 +47,7 @@ EMIFilterSwitch reverse_switch(REVERSE_SWITCH_DEBOUNCE_TIME, REVERSE_SWITCH_FILT
 RotationEncoder rotation_encoder(&logger, &ads);
 
 // Create motor controller
-MotorController motor_controller(&logger, &odrive, &trigger_switch, &reverse_switch, &rotation_encoder);
+BonexMotorController motor_controller(&logger, &odrive, &trigger_switch, &reverse_switch, &rotation_encoder);
 
 void setup()
 {

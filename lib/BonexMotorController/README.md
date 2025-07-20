@@ -1,11 +1,11 @@
-# MotorController Library
+# BonexMotorController Library
 
 A library that coordinates motor control using ODrive, switches, and encoder input.
 
 ## Usage
 
 ```cpp
-#include <MotorController.h>
+#include <BonexMotorController.h>
 #include <ODrive.h>
 #include <EMIFilterSwitch.h>
 #include <RotationEncoder.h>
@@ -22,7 +22,7 @@ EMIFilterSwitch reverse_switch(50, 10, 5);
 RotationEncoder encoder(&logger, &ads);
 
 // Create motor controller
-MotorController motor_controller(&logger, &odrive, &trigger_switch, &reverse_switch, &encoder);
+BonexMotorController motor_controller(&logger, &odrive, &trigger_switch, &reverse_switch, &encoder);
 
 void setup() {
     logger.setSerial(&Serial);
@@ -44,7 +44,7 @@ void loop() {
 
 ### Constructor
 ```cpp
-MotorController(
+BonexMotorController(
     logging::Logger* logger,
     ODrive* odrive,
     EMIFilterSwitch* trigger_switch,
