@@ -18,7 +18,7 @@
 #define BLCD_MAX_TORQUE 1.59
 #define BLCD_MIN_VELOCITY 8
 #define BLCD_STARTUP_VELOCITY 30
-#define BLCD_MAX_VELOCITY 60
+#define BLCD_MAX_VELOCITY 50
 
 HardwareSerial ODriveSerial(1);
 Adafruit_ADS1115 ads;
