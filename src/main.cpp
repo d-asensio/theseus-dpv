@@ -6,6 +6,7 @@
 #include "EMIFilterSwitch.h"
 #include "RotationEncoder.h"
 #include "ODrive.h"
+#include "MotorController.h"
 
 #define LED_BUILTIN 8
 #define ODRIVE_RX_PIN 20
@@ -36,41 +37,17 @@
 HardwareSerial ODriveSerial(1);
 Adafruit_ADS1115 ads;
 
-int16_t blcd_velocity_setpoint = BLCD_STARTUP_VELOCITY;
-
 // Create logger instance
 logging::Logger logger;
 
-// Create ODrive instance
+// Create components
 ODrive odrive(&logger, &ODriveSerial);
-
-// Create switch instances
 EMIFilterSwitch trigger_switch(TRIGGER_SWITCH_DEBOUNCE_TIME, TRIGGER_SWITCH_FILTER_SAMPLES, TRIGGER_SWITCH_THRESHOLD);
 EMIFilterSwitch reverse_switch(REVERSE_SWITCH_DEBOUNCE_TIME, REVERSE_SWITCH_FILTER_SAMPLES, REVERSE_SWITCH_THRESHOLD);
-
-// Create encoder instance
 RotationEncoder rotation_encoder(&logger, &ads);
 
-int16_t from_encoder_angle_to_blcd_velocity(int16_t angle)
-{
-  return map(
-      angle,
-      0,
-      ENCODER_FULL_RANGE_ANGLE,
-      0,
-      BLCD_MAX_VELOCITY);
-}
-
-int16_t from_encoder_angle_delta_to_blcd_velocity_delta(int16_t angle_delta)
-{
-  int16_t mult = 1;
-  if (angle_delta < 0)
-  {
-    mult = -1;
-  }
-
-  return from_encoder_angle_to_blcd_velocity(abs(angle_delta)) * mult;
-}
+// Create motor controller
+MotorController motor_controller(&logger, &odrive, &trigger_switch, &reverse_switch, &rotation_encoder);
 
 void setup()
 {
@@ -103,44 +80,21 @@ void setup()
   trigger_switch.setup(TRIGGER_SWITCH_PIN, INPUT_PULLDOWN);
   reverse_switch.setup(REVERSE_SWITCH_PIN, INPUT_PULLDOWN);
 
-  rotation_encoder.setup(ENCODER_CALIBRATION_MIN_VALUE, ENCODER_CALIBRATION_MAX_VALUE, ENCODER_DIRECTION);
+  rotation_encoder.setup(
+      ENCODER_CALIBRATION_MIN_VALUE,
+      ENCODER_CALIBRATION_MAX_VALUE,
+      ENCODER_DIRECTION);
+
+  motor_controller.setup(
+      BLCD_ODRIVE_AXIS,
+      BLCD_MAX_TORQUE,
+      BLCD_MIN_VELOCITY,
+      BLCD_MAX_VELOCITY,
+      BLCD_STARTUP_VELOCITY);
 }
 
 void loop()
 {
-  // Update switch states
-  trigger_switch.loop();
-  reverse_switch.loop();
-
-  // Update encoder state
-  rotation_encoder.loop();
-
-  int16_t encoder_rotation_angle_delta = rotation_encoder.getAngleDelta();
-  int16_t blcd_velocity_delta = from_encoder_angle_delta_to_blcd_velocity_delta(encoder_rotation_angle_delta);
-
-  blcd_velocity_setpoint += blcd_velocity_delta;
-  blcd_velocity_setpoint = constrain(blcd_velocity_setpoint, BLCD_MIN_VELOCITY, BLCD_MAX_VELOCITY);
-  bool blcd_velocity_delta_changed = blcd_velocity_delta != 0;
-
-  // Get current filtered states
-  int trigger_pressed = trigger_switch.read();
-  int reverse_pressed = reverse_switch.read();
-
-  // Check for state changes
-  bool trigger_changed = trigger_switch.hasChanged();
-  bool reverse_changed = reverse_switch.hasChanged();
-
-  if ((trigger_changed || blcd_velocity_delta_changed) && trigger_pressed == HIGH)
-  {
-    // Apply reverse direction if reverse switch is pressed
-    int16_t final_velocity = reverse_pressed == HIGH ? -blcd_velocity_setpoint : blcd_velocity_setpoint;
-    odrive.setVelocity(BLCD_ODRIVE_AXIS, final_velocity, BLCD_MAX_TORQUE);
-  }
-
-  if (trigger_changed && trigger_pressed == LOW)
-  {
-    odrive.setVelocity(BLCD_ODRIVE_AXIS, 0, BLCD_MAX_TORQUE);
-  }
-
+  motor_controller.loop();
   delay(50);
 }
