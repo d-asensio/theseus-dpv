@@ -2,6 +2,8 @@
 #include <HardwareSerial.h>
 #include <Adafruit_ADS1X15.h>
 #include <EMIFilterSwitch.h>
+#include <RotationEncoder.h>
+#include "logger.h"
 
 #define LED_BUILTIN 8
 #define ODRIVE_RX_PIN 20
@@ -33,11 +35,16 @@ HardwareSerial ODriveSerial(1);
 Adafruit_ADS1115 ads;
 
 int16_t blcd_velocity_setpoint = BLCD_STARTUP_VELOCITY;
-int16_t current_encoder_angle;
+
+// Create logger instance
+logging::Logger logger;
 
 // Create switch instances
 EMIFilterSwitch trigger_switch(TRIGGER_SWITCH_DEBOUNCE_TIME, TRIGGER_SWITCH_FILTER_SAMPLES, TRIGGER_SWITCH_THRESHOLD);
 EMIFilterSwitch reverse_switch(REVERSE_SWITCH_DEBOUNCE_TIME, REVERSE_SWITCH_FILTER_SAMPLES, REVERSE_SWITCH_THRESHOLD);
+
+// Create encoder instance
+RotationEncoder rotation_encoder(&logger, &ads);
 
 void send_velocity_to_odrive(int16_t velocity, float torqueFF = 0.0f)
 {
@@ -55,41 +62,6 @@ void send_velocity_to_odrive(int16_t velocity, float torqueFF = 0.0f)
   ODriveSerial.print(' ');
   ODriveSerial.print(tBuf);
   ODriveSerial.print('\n');
-}
-
-int16_t read_encoder_rotation_angle()
-{
-  int16_t analog_value = ads.readADC_SingleEnded(0);
-
-  return map(
-      analog_value,
-      ENCODER_CALIBRATION_MIN_VALUE,
-      ENCODER_CALIBRATION_MAX_VALUE,
-      0,
-      360);
-}
-
-int16_t get_angle_delta(int16_t current_angle, int16_t new_angle)
-{
-  // Calculate the raw difference
-  int16_t raw_delta = new_angle - current_angle;
-  
-  // Handle wrapping by finding the shortest path
-  // The shortest angular distance between two angles on a circle
-  // is always <= 180 degrees in either direction
-  
-  if (raw_delta > 180) {
-    // Wrapped clockwise: subtract 360 to get the shorter path
-    raw_delta -= 360;
-  } else if (raw_delta < -180) {
-    // Wrapped counter-clockwise: add 360 to get the shorter path
-    raw_delta += 360;
-  }
-  
-  // Apply encoder direction
-  int16_t encoder_rotation_angle_delta = raw_delta * ENCODER_DIRECTION;
-
-  return encoder_rotation_angle_delta;
 }
 
 int16_t from_encoder_angle_to_blcd_velocity(int16_t angle)
@@ -128,6 +100,9 @@ void setup()
   {
   }
 
+  // Initialize logger
+  logger.setSerial(&Serial);
+
   // Check ADS initialization
   if (!ads.begin())
   {
@@ -141,7 +116,7 @@ void setup()
   trigger_switch.setup(TRIGGER_SWITCH_PIN, INPUT_PULLDOWN);
   reverse_switch.setup(REVERSE_SWITCH_PIN, INPUT_PULLDOWN);
 
-  current_encoder_angle = read_encoder_rotation_angle();
+  rotation_encoder.setup(ENCODER_CALIBRATION_MIN_VALUE, ENCODER_CALIBRATION_MAX_VALUE, ENCODER_DIRECTION);
 }
 
 void loop()
@@ -150,11 +125,11 @@ void loop()
   trigger_switch.loop();
   reverse_switch.loop();
 
-  int16_t new_encoder_angle = read_encoder_rotation_angle();
-  int16_t encoder_rotation_angle_delta = get_angle_delta(current_encoder_angle, new_encoder_angle);
+  // Update encoder state
+  rotation_encoder.loop();
+  
+  int16_t encoder_rotation_angle_delta = rotation_encoder.getAngleDelta();
   int16_t blcd_velocity_delta = from_encoder_angle_delta_to_blcd_velocity_delta(encoder_rotation_angle_delta);
-
-  Serial.println(encoder_rotation_angle_delta);
 
   blcd_velocity_setpoint += blcd_velocity_delta;
   blcd_velocity_setpoint = constrain(blcd_velocity_setpoint, BLCD_MIN_VELOCITY, BLCD_MAX_VELOCITY);
@@ -183,8 +158,6 @@ void loop()
   {
     send_velocity_to_odrive(0, BLCD_MAX_TORQUE);
   }
-
-  current_encoder_angle = new_encoder_angle;
 
   delay(50);
 }
