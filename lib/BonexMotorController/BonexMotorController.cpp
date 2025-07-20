@@ -7,7 +7,7 @@ BonexMotorController::BonexMotorController(
     EMIFilterSwitch *reverse_switch,
     RotationEncoder *encoder) : logger(logger), odrive(odrive), trigger_switch(trigger_switch),
                                 reverse_switch(reverse_switch), encoder(encoder), axis_id(0), max_torque(0),
-                                min_velocity(0), max_velocity(0), velocity_setpoint(0)
+                                min_velocity(0), max_velocity(0), velocity_setpoint(0), velocity_changed(false)
 {
   if (logger)
   {
@@ -39,35 +39,8 @@ void BonexMotorController::loop()
   // Update encoder state
   encoder->loop();
 
-  // Get encoder delta and convert to velocity delta
-  int16_t encoder_rotation_angle_delta = encoder->getAngleDelta();
-  int16_t velocity_delta = fromEncoderAngleDeltaToVelocityDelta(encoder_rotation_angle_delta);
-
-  // Update velocity setpoint
-  velocity_setpoint += velocity_delta;
-  velocity_setpoint = constrain(velocity_setpoint, min_velocity, max_velocity);
-  bool velocity_delta_changed = velocity_delta != 0;
-
-  // Get current filtered states
-  bool trigger_pressed = trigger_switch->read() == HIGH;
-  bool reverse_pressed = reverse_switch->read() == HIGH;
-
-  // Check for state changes
-  bool trigger_changed = trigger_switch->hasChanged();
-  bool reverse_changed = reverse_switch->hasChanged();
-
-  // Handle motor control
-  if ((trigger_changed || velocity_delta_changed) && trigger_pressed)
-  {
-    // Apply reverse direction if reverse switch is pressed
-    int16_t final_velocity = reverse_pressed ? -velocity_setpoint : velocity_setpoint;
-    odrive->setVelocity(axis_id, final_velocity, max_torque);
-  }
-
-  if (trigger_changed && !trigger_pressed)
-  {
-    odrive->setVelocity(axis_id, 0, max_torque);
-  }
+  processEncoderInput();
+  handleMotorControl();
 }
 
 // Private helper method for converting encoder angle delta to velocity delta
@@ -79,4 +52,37 @@ int16_t BonexMotorController::fromEncoderAngleDeltaToVelocityDelta(int16_t angle
 
   // Apply direction
   return (angle_delta < 0) ? -mapped_velocity : mapped_velocity;
+}
+
+void BonexMotorController::processEncoderInput()
+{
+  // Get encoder delta and convert to velocity delta
+  int16_t encoder_rotation_angle_delta = encoder->getAngleDelta();
+  int16_t velocity_delta = fromEncoderAngleDeltaToVelocityDelta(encoder_rotation_angle_delta);
+
+  // Update velocity setpoint
+  velocity_setpoint += velocity_delta;
+  velocity_setpoint = constrain(velocity_setpoint, min_velocity, max_velocity);
+
+  // Track if velocity changed
+  velocity_changed = (velocity_delta != 0);
+}
+
+void BonexMotorController::handleMotorControl()
+{
+  bool trigger_pressed = trigger_switch->isPressed();
+  bool trigger_changed = trigger_switch->hasChanged();
+
+  // Handle motor control
+  if ((trigger_changed || velocity_changed) && trigger_pressed)
+  {
+    // Apply reverse direction if reverse switch is pressed
+    int16_t final_velocity = reverse_switch->isPressed() ? -velocity_setpoint : velocity_setpoint;
+    odrive->setVelocity(axis_id, final_velocity, max_torque);
+  }
+
+  if (trigger_changed && !trigger_pressed)
+  {
+    odrive->setVelocity(axis_id, 0, max_torque);
+  }
 }

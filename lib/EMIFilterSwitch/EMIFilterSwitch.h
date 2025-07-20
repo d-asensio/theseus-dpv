@@ -25,10 +25,9 @@ public:
   ~EMIFilterSwitch();
 
   void setup(int pin_number, int pin_mode);
-  int read();
   void loop();
+  bool isPressed();
   bool hasChanged();
-  int getState();
 };
 
 #endif // EMIFILTERSWITCH_H

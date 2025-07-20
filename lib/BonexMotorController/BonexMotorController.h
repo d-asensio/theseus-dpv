@@ -24,10 +24,15 @@ private:
 
   // State
   int16_t velocity_setpoint;
+  bool velocity_changed;
 
 private:
   // Helper methods
   int16_t fromEncoderAngleDeltaToVelocityDelta(int16_t angle_delta);
+
+  // Core processing methods
+  void processEncoderInput();
+  void handleMotorControl();
 
 public:
   BonexMotorController(

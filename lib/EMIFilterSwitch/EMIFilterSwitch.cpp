@@ -37,14 +37,14 @@ void EMIFilterSwitch::setup(int pin_number, int pin_mode)
   loop(); // This will set up the initial state
 }
 
-int EMIFilterSwitch::read()
+bool EMIFilterSwitch::isPressed()
 {
   if (!initialized)
   {
-    return LOW;
+    return false;
   }
 
-  return filtered_state;
+  return filtered_state == HIGH;
 }
 
 void EMIFilterSwitch::loop()
@@ -98,9 +98,4 @@ void EMIFilterSwitch::loop()
 bool EMIFilterSwitch::hasChanged()
 {
   return state_changed;
-}
-
-int EMIFilterSwitch::getState()
-{
-  return filtered_state;
 }

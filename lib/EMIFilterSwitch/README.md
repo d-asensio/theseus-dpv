@@ -28,11 +28,11 @@ void loop() {
     trigger_switch.loop();
     
     // Get current filtered state
-    int state = trigger_switch.read();
+    bool is_pressed = trigger_switch.isPressed();
     
     // Check if state changed since last loop
     if (trigger_switch.hasChanged()) {
-        if (state == HIGH) {
+        if (is_pressed) {
             // Switch was pressed
             Serial.println("Switch pressed!");
         } else {
@@ -57,10 +57,9 @@ EMIFilterSwitch(unsigned long debounce_ms, int samples, int threshold_count)
 
 ### Methods
 - `void setup(int pin_number, int pin_mode)` - Initialize the switch with pin and mode
-- `int read()` - Returns current filtered state (HIGH/LOW)
+- `bool isPressed()` - Returns true if switch is pressed, false if released
 - `void loop()` - Updates internal state and handles filtering/debouncing
 - `bool hasChanged()` - Returns true if state changed since last loop() call
-- `int getState()` - Returns current filtered state (same as read())
 
 ## How It Works
 
