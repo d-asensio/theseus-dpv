@@ -1,9 +1,11 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 #include <Adafruit_ADS1X15.h>
-#include <EMIFilterSwitch.h>
-#include <RotationEncoder.h>
-#include "logger.h"
+#include <logger.h>
+
+#include "EMIFilterSwitch.h"
+#include "RotationEncoder.h"
+#include "ODrive.h"
 
 #define LED_BUILTIN 8
 #define ODRIVE_RX_PIN 20
@@ -39,30 +41,15 @@ int16_t blcd_velocity_setpoint = BLCD_STARTUP_VELOCITY;
 // Create logger instance
 logging::Logger logger;
 
+// Create ODrive instance
+ODrive odrive(&logger, &ODriveSerial);
+
 // Create switch instances
 EMIFilterSwitch trigger_switch(TRIGGER_SWITCH_DEBOUNCE_TIME, TRIGGER_SWITCH_FILTER_SAMPLES, TRIGGER_SWITCH_THRESHOLD);
 EMIFilterSwitch reverse_switch(REVERSE_SWITCH_DEBOUNCE_TIME, REVERSE_SWITCH_FILTER_SAMPLES, REVERSE_SWITCH_THRESHOLD);
 
 // Create encoder instance
 RotationEncoder rotation_encoder(&logger, &ads);
-
-void send_velocity_to_odrive(int16_t velocity, float torqueFF = 0.0f)
-{
-  /* Build the line:
-     "v <axis> <velocity> <torqueFF>\n"
-     dtostrf() converts the float → char[] with fixed width/precision
-  */
-  char tBuf[12];
-  dtostrf(torqueFF, 0, 4, tBuf);
-
-  ODriveSerial.print("v ");
-  ODriveSerial.print(BLCD_ODRIVE_AXIS);
-  ODriveSerial.print(' ');
-  ODriveSerial.print(velocity);
-  ODriveSerial.print(' ');
-  ODriveSerial.print(tBuf);
-  ODriveSerial.print('\n');
-}
 
 int16_t from_encoder_angle_to_blcd_velocity(int16_t angle)
 {
@@ -108,7 +95,7 @@ void setup()
   {
     while (true)
     {
-      // Serial.println("Failed to initialize ADS.");
+      logger.log(logging::LoggerLevel::LOGGER_LEVEL_ERROR, "ADS", "Failed to initialize ADS.");
       delay(1000);
     };
   }
@@ -127,14 +114,13 @@ void loop()
 
   // Update encoder state
   rotation_encoder.loop();
-  
+
   int16_t encoder_rotation_angle_delta = rotation_encoder.getAngleDelta();
   int16_t blcd_velocity_delta = from_encoder_angle_delta_to_blcd_velocity_delta(encoder_rotation_angle_delta);
 
   blcd_velocity_setpoint += blcd_velocity_delta;
   blcd_velocity_setpoint = constrain(blcd_velocity_setpoint, BLCD_MIN_VELOCITY, BLCD_MAX_VELOCITY);
   bool blcd_velocity_delta_changed = blcd_velocity_delta != 0;
-
 
   // Get current filtered states
   int trigger_pressed = trigger_switch.read();
@@ -144,19 +130,16 @@ void loop()
   bool trigger_changed = trigger_switch.hasChanged();
   bool reverse_changed = reverse_switch.hasChanged();
 
-  if (trigger_changed || blcd_velocity_delta_changed)
+  if ((trigger_changed || blcd_velocity_delta_changed) && trigger_pressed == HIGH)
   {
-    if (trigger_pressed == HIGH)
-    {
-      // Apply reverse direction if reverse switch is pressed
-      int16_t final_velocity = reverse_pressed == HIGH ? -blcd_velocity_setpoint : blcd_velocity_setpoint;
-      send_velocity_to_odrive(final_velocity, BLCD_MAX_TORQUE);
-    }
+    // Apply reverse direction if reverse switch is pressed
+    int16_t final_velocity = reverse_pressed == HIGH ? -blcd_velocity_setpoint : blcd_velocity_setpoint;
+    odrive.setVelocity(BLCD_ODRIVE_AXIS, final_velocity, BLCD_MAX_TORQUE);
   }
 
   if (trigger_changed && trigger_pressed == LOW)
   {
-    send_velocity_to_odrive(0, BLCD_MAX_TORQUE);
+    odrive.setVelocity(BLCD_ODRIVE_AXIS, 0, BLCD_MAX_TORQUE);
   }
 
   delay(50);
