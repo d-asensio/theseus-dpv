@@ -12,7 +12,6 @@
 #define ENCODER_CALIBRATION_MIN_VALUE 198
 #define ENCODER_CALIBRATION_MAX_VALUE 27895
 #define ENCODER_DIRECTION -1
-#define ENCODER_DELTA_MIN_RESOLTUION 10
 #define ENCODER_FULL_RANGE_ANGLE 360
 
 #define BLCD_ODRIVE_AXIS 0
@@ -72,22 +71,23 @@ int16_t read_encoder_rotation_angle()
 
 int16_t get_angle_delta(int16_t current_angle, int16_t new_angle)
 {
-  if (current_angle <= 180 && new_angle >= 180)
-  {
-    return 0;
+  // Calculate the raw difference
+  int16_t raw_delta = new_angle - current_angle;
+  
+  // Handle wrapping by finding the shortest path
+  // The shortest angular distance between two angles on a circle
+  // is always <= 180 degrees in either direction
+  
+  if (raw_delta > 180) {
+    // Wrapped clockwise: subtract 360 to get the shorter path
+    raw_delta -= 360;
+  } else if (raw_delta < -180) {
+    // Wrapped counter-clockwise: add 360 to get the shorter path
+    raw_delta += 360;
   }
-
-  if (current_angle >= 180 && new_angle <= 180)
-  {
-    return 0;
-  }
-
-  int16_t encoder_rotation_angle_delta = (current_angle - new_angle) * ENCODER_DIRECTION;
-
-  if (abs(encoder_rotation_angle_delta) < ENCODER_DELTA_MIN_RESOLTUION)
-  {
-    encoder_rotation_angle_delta = 0;
-  }
+  
+  // Apply encoder direction
+  int16_t encoder_rotation_angle_delta = raw_delta * ENCODER_DIRECTION;
 
   return encoder_rotation_angle_delta;
 }
@@ -153,6 +153,8 @@ void loop()
   int16_t new_encoder_angle = read_encoder_rotation_angle();
   int16_t encoder_rotation_angle_delta = get_angle_delta(current_encoder_angle, new_encoder_angle);
   int16_t blcd_velocity_delta = from_encoder_angle_delta_to_blcd_velocity_delta(encoder_rotation_angle_delta);
+
+  Serial.println(encoder_rotation_angle_delta);
 
   blcd_velocity_setpoint += blcd_velocity_delta;
   blcd_velocity_setpoint = constrain(blcd_velocity_setpoint, BLCD_MIN_VELOCITY, BLCD_MAX_VELOCITY);
