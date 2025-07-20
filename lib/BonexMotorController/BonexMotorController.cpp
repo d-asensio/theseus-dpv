@@ -56,24 +56,44 @@ int16_t BonexMotorController::fromEncoderAngleDeltaToVelocityDelta(int16_t angle
   return (angle_delta < 0) ? -mapped_velocity : mapped_velocity;
 }
 
+int16_t BonexMotorController::applyVelocityConstraints(int16_t velocity, bool is_reverse_mode)
+{
+  if (is_reverse_mode)
+  {
+    return constrain(velocity, -max_reverse_velocity, -min_reverse_velocity);
+  }
+
+  return constrain(velocity, min_velocity, max_velocity);
+}
+
 void BonexMotorController::processEncoderInput()
 {
   // Get encoder delta and convert to velocity delta
   int16_t encoder_rotation_angle_delta = encoder->getAngleDelta();
   int16_t velocity_delta = fromEncoderAngleDeltaToVelocityDelta(encoder_rotation_angle_delta);
 
-  // Update velocity setpoint
-  velocity_setpoint += velocity_delta;
+  // Check if reverse switch state changed
+  bool reverse_changed = reverse_switch->hasChanged();
+  bool is_reverse = reverse_switch->isPressed();
 
-  // Apply appropriate velocity constraints based on direction
-  if (velocity_setpoint >= 0)
+  // If reverse switch changed, update setpoint to reflect new direction
+  if (reverse_changed && velocity_setpoint != 0)
   {
-    velocity_setpoint = constrain(velocity_setpoint, min_velocity, max_velocity);
+    velocity_setpoint = -velocity_setpoint;
+  }
+
+  // Update velocity setpoint based on reverse switch
+  if (is_reverse)
+  {
+    velocity_setpoint -= velocity_delta;
   }
   else
   {
-    velocity_setpoint = constrain(velocity_setpoint, -max_reverse_velocity, -min_reverse_velocity);
+    velocity_setpoint += velocity_delta;
   }
+
+  // Apply constraints based on reverse switch state, not velocity sign
+  velocity_setpoint = applyVelocityConstraints(velocity_setpoint, is_reverse);
 }
 
 void BonexMotorController::handleMotorControl()
@@ -85,9 +105,7 @@ void BonexMotorController::handleMotorControl()
   // Handle motor control
   if ((trigger_changed || encoder_changed) && trigger_pressed)
   {
-    // Apply reverse direction if reverse switch is pressed
-    int16_t final_velocity = reverse_switch->isPressed() ? -velocity_setpoint : velocity_setpoint;
-    odrive->setVelocity(axis_id, final_velocity, max_torque);
+    odrive->setVelocity(axis_id, velocity_setpoint, max_torque);
   }
 
   if (trigger_changed && !trigger_pressed)

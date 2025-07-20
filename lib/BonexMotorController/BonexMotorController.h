@@ -40,7 +40,8 @@ private:
 private:
   // Helper methods
   int16_t fromEncoderAngleDeltaToVelocityDelta(int16_t angle_delta);
-
+  int16_t applyVelocityConstraints(int16_t velocity, bool is_reverse_mode);
+  
   // Core processing methods
   void processEncoderInput();
   void handleMotorControl();
