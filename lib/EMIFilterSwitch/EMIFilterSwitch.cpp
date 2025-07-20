@@ -54,14 +54,40 @@ void EMIFilterSwitch::loop()
     return;
   }
 
-  // Read the current switch state
-  int current_reading = digitalRead(pin);
+  updateReadings();
+  updateFilteredState();
+}
 
-  // Store the reading in the circular buffer
+bool EMIFilterSwitch::hasChanged()
+{
+  return state_changed;
+}
+
+void EMIFilterSwitch::updateReadings()
+{
+  int current_reading = digitalRead(pin);
   readings[reading_index] = current_reading;
   reading_index = (reading_index + 1) % filter_samples;
+}
 
-  // Count how many HIGH readings we have
+void EMIFilterSwitch::updateFilteredState()
+{
+  int high_count = countHighReadings();
+  int new_filtered_state = (high_count >= threshold) ? HIGH : LOW;
+  
+  if (hasStateChanged(new_filtered_state) && isDebounceTimeElapsed())
+  {
+    state_changed = true;
+    last_change = millis();
+    filtered_state = new_filtered_state;
+    return;
+  }
+  
+  state_changed = false;
+}
+
+int EMIFilterSwitch::countHighReadings()
+{
   int high_count = 0;
   for (int i = 0; i < filter_samples; i++)
   {
@@ -70,32 +96,15 @@ void EMIFilterSwitch::loop()
       high_count++;
     }
   }
-
-  // Calculate new filtered state
-  int new_filtered_state = (high_count >= threshold) ? HIGH : LOW;
-
-  // Check for state change with debouncing
-  unsigned long current_time = millis();
-  if (current_time - last_change > debounce_time)
-  {
-    if (filtered_state != new_filtered_state)
-    {
-      state_changed = true;
-      last_change = current_time;
-      filtered_state = new_filtered_state;
-    }
-    else
-    {
-      state_changed = false;
-    }
-  }
-  else
-  {
-    state_changed = false;
-  }
+  return high_count;
 }
 
-bool EMIFilterSwitch::hasChanged()
+bool EMIFilterSwitch::isDebounceTimeElapsed()
 {
-  return state_changed;
+  return (millis() - last_change) > debounce_time;
+}
+
+bool EMIFilterSwitch::hasStateChanged(int new_state)
+{
+  return filtered_state != new_state;
 }

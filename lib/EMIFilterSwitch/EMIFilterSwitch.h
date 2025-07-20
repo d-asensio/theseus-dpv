@@ -20,6 +20,13 @@ private:
   bool initialized;
   bool state_changed;
 
+private:
+  void updateReadings();
+  void updateFilteredState();
+  int countHighReadings();
+  bool isDebounceTimeElapsed();
+  bool hasStateChanged(int new_state);
+
 public:
   EMIFilterSwitch(unsigned long debounce_ms, int samples, int threshold_count);
   ~EMIFilterSwitch();
