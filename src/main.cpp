@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 #include <Adafruit_ADS1X15.h>
+#include <EMIFilterSwitch.h>
 
 #define LED_BUILTIN 8
 #define ODRIVE_RX_PIN 20
@@ -20,12 +21,20 @@
 #define BLCD_STARTUP_VELOCITY 30
 #define BLCD_MAX_VELOCITY 50
 
+// EMI filtering and debouncing constants
+#define SWITCH_DEBOUNCE_TIME 50  // milliseconds
+#define SWITCH_FILTER_SAMPLES 5  // number of samples for filtering
+#define SWITCH_THRESHOLD 3       // minimum HIGH readings to confirm switch press
+
 HardwareSerial ODriveSerial(1);
 Adafruit_ADS1115 ads;
 
 int16_t blcd_velocity_setpoint = BLCD_STARTUP_VELOCITY;
 int16_t current_encoder_angle;
-int current_trigger_pressed;
+
+// Create switch instances
+EMIFilterSwitch trigger_switch(SWITCH_DEBOUNCE_TIME, SWITCH_FILTER_SAMPLES, SWITCH_THRESHOLD);
+EMIFilterSwitch reverse_switch(SWITCH_DEBOUNCE_TIME, SWITCH_FILTER_SAMPLES, SWITCH_THRESHOLD);
 
 void send_velocity_to_odrive(int16_t velocity, float torqueFF = 0.0f)
 {
@@ -102,13 +111,13 @@ int16_t from_encoder_angle_delta_to_blcd_velocity_delta(int16_t angle_delta)
 
 void setup()
 {
-  // Serial.begin(115200);
+  Serial.begin(115200);
   ODriveSerial.begin(115200, SERIAL_8N1, ODRIVE_RX_PIN, ODRIVE_TX_PIN);
 
   // Wait until USB serial is initialized
-  // while (!Serial)
-  // {
-  // }
+  while (!Serial)
+  {
+  }
 
   // Wait until ODrive serial is initialized
   while (!ODriveSerial)
@@ -125,11 +134,10 @@ void setup()
     };
   }
 
-  pinMode(TRIGGER_SWITCH_PIN, INPUT_PULLDOWN);
-  pinMode(REVERSE_SWITCH_PIN, INPUT_PULLDOWN);
+  trigger_switch.setup(TRIGGER_SWITCH_PIN, INPUT_PULLDOWN);
+  reverse_switch.setup(REVERSE_SWITCH_PIN, INPUT_PULLDOWN);
 
   current_encoder_angle = read_encoder_rotation_angle();
-  current_trigger_pressed = digitalRead(TRIGGER_SWITCH_PIN);
 }
 
 void loop()
@@ -141,17 +149,31 @@ void loop()
   blcd_velocity_setpoint += blcd_velocity_delta;
   blcd_velocity_setpoint = constrain(blcd_velocity_setpoint, BLCD_MIN_VELOCITY, BLCD_MAX_VELOCITY);
 
-  int trigger_pressed = digitalRead(TRIGGER_SWITCH_PIN);
-  int reverse_pressed = digitalRead(REVERSE_SWITCH_PIN);
+  // Update switch states
+  trigger_switch.loop();
+  reverse_switch.loop();
 
-  bool trigger_changed = current_trigger_pressed != trigger_pressed;
+  // Get current filtered states
+  int trigger_pressed = trigger_switch.read();
+  int reverse_pressed = reverse_switch.read();
+
+  Serial.print("Trigger: ");
+  Serial.println(trigger_pressed);
+  Serial.print("Reverse: ");
+  Serial.println(reverse_pressed);
+
+  // Check for state changes
+  bool trigger_changed = trigger_switch.hasChanged();
+  bool reverse_changed = reverse_switch.hasChanged();
   bool blcd_velocity_delta_changed = blcd_velocity_delta != 0;
 
   if (trigger_changed || blcd_velocity_delta_changed)
   {
     if (trigger_pressed == HIGH)
     {
-      send_velocity_to_odrive(blcd_velocity_setpoint, BLCD_MAX_TORQUE);
+      // Apply reverse direction if reverse switch is pressed
+      int16_t final_velocity = reverse_pressed == HIGH ? -blcd_velocity_setpoint : blcd_velocity_setpoint;
+      send_velocity_to_odrive(final_velocity, BLCD_MAX_TORQUE);
     }
   }
 
@@ -160,7 +182,6 @@ void loop()
     send_velocity_to_odrive(0, BLCD_MAX_TORQUE);
   }
 
-  current_trigger_pressed = trigger_pressed;
   current_encoder_angle = new_encoder_angle;
 
   delay(50);
