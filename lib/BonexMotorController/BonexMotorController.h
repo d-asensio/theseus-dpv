@@ -21,6 +21,8 @@ private:
   float max_torque;
   int16_t min_velocity;
   int16_t max_velocity;
+  int16_t min_reverse_velocity;
+  int16_t max_reverse_velocity;
 
   // State
   int16_t velocity_setpoint;
@@ -41,7 +43,14 @@ public:
       EMIFilterSwitch *reverse_switch,
       RotationEncoder *encoder);
 
-  void setup(uint8_t axis_id, float max_torque, int16_t min_velocity, int16_t max_velocity, int16_t startup_velocity);
+  void setup(
+      uint8_t axis_id,
+      float max_torque,
+      int16_t min_velocity,
+      int16_t max_velocity,
+      int16_t min_reverse_velocity,
+      int16_t max_reverse_velocity,
+      int16_t startup_velocity);
   void loop();
 };
 

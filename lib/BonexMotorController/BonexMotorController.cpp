@@ -15,18 +15,20 @@ BonexMotorController::BonexMotorController(
   }
 }
 
-void BonexMotorController::setup(uint8_t axis_id, float max_torque, int16_t min_velocity, int16_t max_velocity, int16_t startup_velocity)
+void BonexMotorController::setup(uint8_t axis_id, float max_torque, int16_t min_velocity, int16_t max_velocity, int16_t min_reverse_velocity, int16_t max_reverse_velocity, int16_t startup_velocity)
 {
   this->axis_id = axis_id;
   this->max_torque = max_torque;
   this->min_velocity = min_velocity;
   this->max_velocity = max_velocity;
+  this->min_reverse_velocity = min_reverse_velocity;
+  this->max_reverse_velocity = max_reverse_velocity;
   this->velocity_setpoint = startup_velocity;
 
   if (logger)
   {
-    logger->log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BonexMotorController", "Setup complete - axis: %d, max_torque: %.2f, velocity_range: %d-%d",
-                axis_id, max_torque, min_velocity, max_velocity);
+    logger->log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BonexMotorController", "Setup complete - axis: %d, max_torque: %.2f, forward_velocity_range: %d-%d, reverse_velocity_range: %d-%d",
+                axis_id, max_torque, min_velocity, max_velocity, min_reverse_velocity, max_reverse_velocity);
   }
 }
 
@@ -62,7 +64,16 @@ void BonexMotorController::processEncoderInput()
 
   // Update velocity setpoint
   velocity_setpoint += velocity_delta;
-  velocity_setpoint = constrain(velocity_setpoint, min_velocity, max_velocity);
+
+  // Apply appropriate velocity constraints based on direction
+  if (velocity_setpoint >= 0)
+  {
+    velocity_setpoint = constrain(velocity_setpoint, min_velocity, max_velocity);
+  }
+  else
+  {
+    velocity_setpoint = constrain(velocity_setpoint, -max_reverse_velocity, -min_reverse_velocity);
+  }
 }
 
 void BonexMotorController::handleMotorControl()
