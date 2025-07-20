@@ -15,7 +15,7 @@ BonexMotorController::BonexMotorController(
   }
 }
 
-void BonexMotorController::setup(const MotorControllerConfig& config)
+void BonexMotorController::setup(const MotorControllerConfig &config)
 {
   this->axis_id = config.axis_id;
   this->max_torque = config.max_torque;
