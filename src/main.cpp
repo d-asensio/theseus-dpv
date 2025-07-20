@@ -29,13 +29,11 @@
 #define MOTOR_STARTUP_VELOCITY 30
 
 // EMI filtering and debouncing constants
-#define TRIGGER_SWITCH_DEBOUNCE_TIME 100
+#define TRIGGER_SWITCH_DEBOUNCE_TIME 50
 #define TRIGGER_SWITCH_FILTER_SAMPLES 10
-#define TRIGGER_SWITCH_THRESHOLD 5
 
-#define REVERSE_SWITCH_DEBOUNCE_TIME 100
+#define REVERSE_SWITCH_DEBOUNCE_TIME 50
 #define REVERSE_SWITCH_FILTER_SAMPLES 10
-#define REVERSE_SWITCH_THRESHOLD 5
 
 HardwareSerial ODriveSerial(1);
 Adafruit_ADS1115 ads;
@@ -47,12 +45,10 @@ logging::Logger logger;
 ODrive odrive(&logger, &ODriveSerial);
 
 EMIFilterSwitch trigger_switch({TRIGGER_SWITCH_DEBOUNCE_TIME,
-                                TRIGGER_SWITCH_FILTER_SAMPLES,
-                                TRIGGER_SWITCH_THRESHOLD});
+                                TRIGGER_SWITCH_FILTER_SAMPLES});
 
 EMIFilterSwitch reverse_switch({REVERSE_SWITCH_DEBOUNCE_TIME,
-                                REVERSE_SWITCH_FILTER_SAMPLES,
-                                REVERSE_SWITCH_THRESHOLD});
+                                REVERSE_SWITCH_FILTER_SAMPLES});
 
 RotationEncoder rotation_encoder(&logger, &ads);
 
@@ -106,5 +102,5 @@ void setup()
 void loop()
 {
   motor_controller.loop();
-  delay(50);
+  delay(10);
 }

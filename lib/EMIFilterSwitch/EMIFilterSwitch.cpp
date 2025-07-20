@@ -4,7 +4,6 @@ EMIFilterSwitch::EMIFilterSwitch(const SwitchConfig& config)
 {
   debounce_time = config.debounce_time;
   filter_samples = config.filter_samples;
-  threshold = config.threshold;
 
   current_state = LOW;
   filtered_state = LOW;
@@ -73,7 +72,7 @@ void EMIFilterSwitch::updateReadings()
 void EMIFilterSwitch::updateFilteredState()
 {
   int high_count = countHighReadings();
-  int new_filtered_state = (high_count >= threshold) ? HIGH : LOW;
+  int new_filtered_state = (high_count == filter_samples) ? HIGH : LOW;
   
   if (hasStateChanged(new_filtered_state) && isDebounceTimeElapsed())
   {

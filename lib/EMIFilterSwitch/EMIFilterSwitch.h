@@ -6,7 +6,6 @@
 struct SwitchConfig {
     unsigned long debounce_time;
     int filter_samples;
-    int threshold;
 };
 
 class EMIFilterSwitch
@@ -16,7 +15,6 @@ private:
   int mode;
   unsigned long debounce_time;
   int filter_samples;
-  int threshold;
 
   int current_state;
   int filtered_state;
