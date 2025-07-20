@@ -37,6 +37,8 @@ private:
 
   // State
   int16_t velocity_setpoint;
+  bool direction_locked;  // Prevents direction changes while trigger is pressed
+  bool locked_reverse_mode;  // Stores the reverse mode state when trigger was pressed
 
 private:
   // Helper methods

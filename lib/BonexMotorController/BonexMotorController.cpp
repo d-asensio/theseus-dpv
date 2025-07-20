@@ -7,7 +7,8 @@ BonexMotorController::BonexMotorController(
     EMIFilterSwitch *reverse_switch,
     RotationEncoder *encoder) : logger(logger), odrive(odrive), trigger_switch(trigger_switch),
                                 reverse_switch(reverse_switch), encoder(encoder), axis_id(0), max_torque(0),
-                                min_velocity(0), max_velocity(0), velocity_setpoint(0)
+                                min_velocity(0), max_velocity(0), velocity_setpoint(0), direction_locked(false),
+                                locked_reverse_mode(false)
 {
   if (logger)
   {
@@ -76,14 +77,17 @@ void BonexMotorController::processEncoderInput()
   bool reverse_changed = reverse_switch->hasChanged();
   bool is_reverse = reverse_switch->isPressed();
 
-  // If reverse switch changed, update setpoint to reflect new direction
-  if (reverse_changed && velocity_setpoint != 0)
+  // Only allow direction changes if trigger is not pressed (direction not locked)
+  if (reverse_changed && velocity_setpoint != 0 && !direction_locked)
   {
     velocity_setpoint = -velocity_setpoint;
   }
 
-  // Update velocity setpoint based on reverse switch
-  if (is_reverse)
+  // Use locked direction mode if trigger is pressed, otherwise use current reverse switch state
+  bool effective_reverse_mode = direction_locked ? locked_reverse_mode : is_reverse;
+
+  // Update velocity setpoint based on effective reverse mode
+  if (effective_reverse_mode)
   {
     velocity_setpoint -= velocity_delta;
   }
@@ -92,8 +96,8 @@ void BonexMotorController::processEncoderInput()
     velocity_setpoint += velocity_delta;
   }
 
-  // Apply constraints based on reverse switch state, not velocity sign
-  velocity_setpoint = applyVelocityConstraints(velocity_setpoint, is_reverse);
+  // Apply constraints based on effective reverse mode, not velocity sign
+  velocity_setpoint = applyVelocityConstraints(velocity_setpoint, effective_reverse_mode);
 }
 
 void BonexMotorController::handleMotorControl()
@@ -105,11 +109,20 @@ void BonexMotorController::handleMotorControl()
   // Handle motor control
   if ((trigger_changed || encoder_changed) && trigger_pressed)
   {
+    // Lock the direction when trigger is first pressed
+    if (trigger_changed)
+    {
+      direction_locked = true;
+      locked_reverse_mode = reverse_switch->isPressed();
+    }
+    
     odrive->setVelocity(axis_id, velocity_setpoint, max_torque);
   }
 
   if (trigger_changed && !trigger_pressed)
   {
+    // Unlock direction when trigger is released
+    direction_locked = false;
     odrive->setVelocity(axis_id, 0, max_torque);
   }
 }
