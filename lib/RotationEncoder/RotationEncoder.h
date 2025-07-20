@@ -6,6 +6,12 @@
 
 #include "logger.h"
 
+struct EncoderConfig {
+    int16_t calibration_min_value;
+    int16_t calibration_max_value;
+    int8_t direction;
+};
+
 class RotationEncoder
 {
 private:
@@ -24,7 +30,7 @@ private:
 public:
   RotationEncoder(logging::Logger *logger, Adafruit_ADS1115 *ads);
 
-  void setup(int16_t calibration_min_value, int16_t calibration_max_value, int8_t direction);
+  void setup(const EncoderConfig& config);
 
   int16_t getAngle();
   int16_t getAngleDelta();

@@ -19,13 +19,14 @@
 #define ENCODER_DIRECTION -1
 #define ENCODER_FULL_RANGE_ANGLE 360
 
-#define BLCD_ODRIVE_AXIS 0
-#define BLCD_MAX_TORQUE 1.59
-#define BLCD_MIN_VELOCITY 10
-#define BLCD_MAX_VELOCITY 50
-#define BLCD_MIN_REVERSE_VELOCITY 8
-#define BLCD_MAX_REVERSE_VELOCITY 15
-#define BLCD_STARTUP_VELOCITY 30
+// Motor controller configuration constants
+#define MOTOR_AXIS_ID 0
+#define MOTOR_MAX_TORQUE 1.59f
+#define MOTOR_MIN_VELOCITY 10
+#define MOTOR_MAX_VELOCITY 50
+#define MOTOR_MIN_REVERSE_VELOCITY 8
+#define MOTOR_MAX_REVERSE_VELOCITY 15
+#define MOTOR_STARTUP_VELOCITY 30
 
 // EMI filtering and debouncing constants
 #define TRIGGER_SWITCH_DEBOUNCE_TIME 100
@@ -44,8 +45,15 @@ logging::Logger logger;
 
 // Create components
 ODrive odrive(&logger, &ODriveSerial);
-EMIFilterSwitch trigger_switch(TRIGGER_SWITCH_DEBOUNCE_TIME, TRIGGER_SWITCH_FILTER_SAMPLES, TRIGGER_SWITCH_THRESHOLD);
-EMIFilterSwitch reverse_switch(REVERSE_SWITCH_DEBOUNCE_TIME, REVERSE_SWITCH_FILTER_SAMPLES, REVERSE_SWITCH_THRESHOLD);
+
+EMIFilterSwitch trigger_switch({TRIGGER_SWITCH_DEBOUNCE_TIME,
+                                TRIGGER_SWITCH_FILTER_SAMPLES,
+                                TRIGGER_SWITCH_THRESHOLD});
+
+EMIFilterSwitch reverse_switch({REVERSE_SWITCH_DEBOUNCE_TIME,
+                                REVERSE_SWITCH_FILTER_SAMPLES,
+                                REVERSE_SWITCH_THRESHOLD});
+
 RotationEncoder rotation_encoder(&logger, &ads);
 
 // Create motor controller
@@ -82,19 +90,17 @@ void setup()
   trigger_switch.setup(TRIGGER_SWITCH_PIN, INPUT_PULLDOWN);
   reverse_switch.setup(REVERSE_SWITCH_PIN, INPUT_PULLDOWN);
 
-  rotation_encoder.setup(
-      ENCODER_CALIBRATION_MIN_VALUE,
-      ENCODER_CALIBRATION_MAX_VALUE,
-      ENCODER_DIRECTION);
+  rotation_encoder.setup({ENCODER_CALIBRATION_MIN_VALUE,
+                          ENCODER_CALIBRATION_MAX_VALUE,
+                          ENCODER_DIRECTION});
 
-  motor_controller.setup(
-      BLCD_ODRIVE_AXIS,
-      BLCD_MAX_TORQUE,
-      BLCD_MIN_VELOCITY,
-      BLCD_MAX_VELOCITY,
-      BLCD_MIN_REVERSE_VELOCITY,
-      BLCD_MAX_REVERSE_VELOCITY,
-      BLCD_STARTUP_VELOCITY);
+  motor_controller.setup({MOTOR_AXIS_ID,
+                          MOTOR_MAX_TORQUE,
+                          MOTOR_MIN_VELOCITY,
+                          MOTOR_MAX_VELOCITY,
+                          MOTOR_MIN_REVERSE_VELOCITY,
+                          MOTOR_MAX_REVERSE_VELOCITY,
+                          MOTOR_STARTUP_VELOCITY});
 }
 
 void loop()

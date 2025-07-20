@@ -1,10 +1,10 @@
 #include "EMIFilterSwitch.h"
 
-EMIFilterSwitch::EMIFilterSwitch(unsigned long debounce_ms, int samples, int threshold_count)
+EMIFilterSwitch::EMIFilterSwitch(const SwitchConfig& config)
 {
-  debounce_time = debounce_ms;
-  filter_samples = samples;
-  threshold = threshold_count;
+  debounce_time = config.debounce_time;
+  filter_samples = config.filter_samples;
+  threshold = config.threshold;
 
   current_state = LOW;
   filtered_state = LOW;

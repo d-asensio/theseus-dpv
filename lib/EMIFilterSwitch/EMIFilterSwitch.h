@@ -3,6 +3,12 @@
 
 #include <Arduino.h>
 
+struct SwitchConfig {
+    unsigned long debounce_time;
+    int filter_samples;
+    int threshold;
+};
+
 class EMIFilterSwitch
 {
 private:
@@ -28,7 +34,7 @@ private:
   bool hasStateChanged(int new_state);
 
 public:
-  EMIFilterSwitch(unsigned long debounce_ms, int samples, int threshold_count);
+  EMIFilterSwitch(const SwitchConfig& config);
   ~EMIFilterSwitch();
 
   void setup(int pin_number, int pin_mode);

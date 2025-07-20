@@ -7,6 +7,16 @@
 #include "EMIFilterSwitch.h"
 #include "RotationEncoder.h"
 
+struct MotorControllerConfig {
+    uint8_t axis_id;
+    float max_torque;
+    int16_t min_velocity;
+    int16_t max_velocity;
+    int16_t min_reverse_velocity;
+    int16_t max_reverse_velocity;
+    int16_t startup_velocity;
+};
+
 class BonexMotorController
 {
 private:
@@ -43,14 +53,7 @@ public:
       EMIFilterSwitch *reverse_switch,
       RotationEncoder *encoder);
 
-  void setup(
-      uint8_t axis_id,
-      float max_torque,
-      int16_t min_velocity,
-      int16_t max_velocity,
-      int16_t min_reverse_velocity,
-      int16_t max_reverse_velocity,
-      int16_t startup_velocity);
+  void setup(const MotorControllerConfig& config);
   void loop();
 };
 

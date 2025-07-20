@@ -15,20 +15,20 @@ BonexMotorController::BonexMotorController(
   }
 }
 
-void BonexMotorController::setup(uint8_t axis_id, float max_torque, int16_t min_velocity, int16_t max_velocity, int16_t min_reverse_velocity, int16_t max_reverse_velocity, int16_t startup_velocity)
+void BonexMotorController::setup(const MotorControllerConfig& config)
 {
-  this->axis_id = axis_id;
-  this->max_torque = max_torque;
-  this->min_velocity = min_velocity;
-  this->max_velocity = max_velocity;
-  this->min_reverse_velocity = min_reverse_velocity;
-  this->max_reverse_velocity = max_reverse_velocity;
-  this->velocity_setpoint = startup_velocity;
+  this->axis_id = config.axis_id;
+  this->max_torque = config.max_torque;
+  this->min_velocity = config.min_velocity;
+  this->max_velocity = config.max_velocity;
+  this->min_reverse_velocity = config.min_reverse_velocity;
+  this->max_reverse_velocity = config.max_reverse_velocity;
+  this->velocity_setpoint = config.startup_velocity;
 
   if (logger)
   {
     logger->log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BonexMotorController", "Setup complete - axis: %d, max_torque: %.2f, forward_velocity_range: %d-%d, reverse_velocity_range: %d-%d",
-                axis_id, max_torque, min_velocity, max_velocity, min_reverse_velocity, max_reverse_velocity);
+                config.axis_id, config.max_torque, config.min_velocity, config.max_velocity, config.min_reverse_velocity, config.max_reverse_velocity);
   }
 }
 

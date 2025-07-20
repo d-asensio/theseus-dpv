@@ -9,20 +9,20 @@ RotationEncoder::RotationEncoder(logging::Logger *logger, Adafruit_ADS1115 *ads)
   }
 }
 
-void RotationEncoder::setup(int16_t calibration_min_value, int16_t calibration_max_value, int8_t direction)
+void RotationEncoder::setup(const EncoderConfig& config)
 {
-  this->calibration_min_value = calibration_min_value;
-  this->calibration_max_value = calibration_max_value;
-  this->direction = direction;
-
+  this->calibration_min_value = config.calibration_min_value;
+  this->calibration_max_value = config.calibration_max_value;
+  this->direction = config.direction;
+  
   // Initialize with current angle
   current_angle = getAngle();
   previous_angle = current_angle;
-
+  
   if (logger)
   {
     logger->log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "RotationEncoder", "Setup complete - min: %d, max: %d, direction: %d",
-                calibration_min_value, calibration_max_value, direction);
+      config.calibration_min_value, config.calibration_max_value, config.direction);
   }
 }
 
