@@ -19,6 +19,7 @@ private:
   int16_t current_angle;
   int16_t previous_angle;
   int16_t angle_delta;
+  bool angle_changed;
 
 public:
   RotationEncoder(logging::Logger *logger, Adafruit_ADS1115 *ads);
@@ -27,6 +28,7 @@ public:
 
   int16_t getAngle();
   int16_t getAngleDelta();
+  bool hasChanged();
 
   void loop();
 };

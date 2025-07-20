@@ -24,7 +24,6 @@ private:
 
   // State
   int16_t velocity_setpoint;
-  bool velocity_changed;
 
 private:
   // Helper methods

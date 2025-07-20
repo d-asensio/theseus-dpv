@@ -7,7 +7,7 @@ BonexMotorController::BonexMotorController(
     EMIFilterSwitch *reverse_switch,
     RotationEncoder *encoder) : logger(logger), odrive(odrive), trigger_switch(trigger_switch),
                                 reverse_switch(reverse_switch), encoder(encoder), axis_id(0), max_torque(0),
-                                min_velocity(0), max_velocity(0), velocity_setpoint(0), velocity_changed(false)
+                                min_velocity(0), max_velocity(0), velocity_setpoint(0)
 {
   if (logger)
   {
@@ -63,18 +63,16 @@ void BonexMotorController::processEncoderInput()
   // Update velocity setpoint
   velocity_setpoint += velocity_delta;
   velocity_setpoint = constrain(velocity_setpoint, min_velocity, max_velocity);
-
-  // Track if velocity changed
-  velocity_changed = (velocity_delta != 0);
 }
 
 void BonexMotorController::handleMotorControl()
 {
   bool trigger_pressed = trigger_switch->isPressed();
   bool trigger_changed = trigger_switch->hasChanged();
+  bool encoder_changed = encoder->hasChanged();
 
   // Handle motor control
-  if ((trigger_changed || velocity_changed) && trigger_pressed)
+  if ((trigger_changed || encoder_changed) && trigger_pressed)
   {
     // Apply reverse direction if reverse switch is pressed
     int16_t final_velocity = reverse_switch->isPressed() ? -velocity_setpoint : velocity_setpoint;
