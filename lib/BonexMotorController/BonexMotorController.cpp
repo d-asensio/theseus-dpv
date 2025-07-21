@@ -8,7 +8,7 @@ BonexMotorController::BonexMotorController(
     RotationEncoder *encoder) : logger(logger), odrive(odrive), trigger_switch(trigger_switch),
                                 reverse_switch(reverse_switch), encoder(encoder), axis_id(0), max_torque(0),
                                 min_velocity(0), max_velocity(0), velocity_setpoint(0), direction_locked(false),
-                                locked_reverse_mode(false)
+                                locked_reverse_mode(false), forward_direction_multiplier(1)
 {
   if (logger)
   {
@@ -25,11 +25,13 @@ void BonexMotorController::setup(const MotorControllerConfig &config)
   this->min_reverse_velocity = config.min_reverse_velocity;
   this->max_reverse_velocity = config.max_reverse_velocity;
   this->velocity_setpoint = config.startup_velocity;
+  this->forward_direction_multiplier = config.forward_direction_multiplier;
 
   if (logger)
   {
-    logger->log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BonexMotorController", "Setup complete - axis: %d, max_torque: %.2f, forward_velocity_range: %d-%d, reverse_velocity_range: %d-%d",
-                config.axis_id, config.max_torque, config.min_velocity, config.max_velocity, config.min_reverse_velocity, config.max_reverse_velocity);
+    logger->log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BonexMotorController", "Setup complete - axis: %d, max_torque: %.2f, forward_velocity_range: %d-%d, reverse_velocity_range: %d-%d, forward_direction_multiplier: %d",
+                config.axis_id, config.max_torque, config.min_velocity, config.max_velocity, config.min_reverse_velocity, config.max_reverse_velocity,
+                config.forward_direction_multiplier);
   }
 }
 
@@ -115,8 +117,11 @@ void BonexMotorController::handleMotorControl()
       direction_locked = true;
       locked_reverse_mode = reverse_switch->isPressed();
     }
-    
-    odrive->setVelocity(axis_id, velocity_setpoint, max_torque);
+
+    odrive->setVelocity(
+        axis_id,
+        velocity_setpoint * forward_direction_multiplier,
+        max_torque);
   }
 
   if (trigger_changed && !trigger_pressed)

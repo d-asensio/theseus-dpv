@@ -16,6 +16,7 @@ struct MotorControllerConfig
   int16_t min_reverse_velocity;
   int16_t max_reverse_velocity;
   int16_t startup_velocity;
+  int8_t forward_direction_multiplier;
 };
 
 class BonexMotorController
@@ -34,11 +35,12 @@ private:
   int16_t max_velocity;
   int16_t min_reverse_velocity;
   int16_t max_reverse_velocity;
+  int8_t forward_direction_multiplier;
 
   // State
   int16_t velocity_setpoint;
-  bool direction_locked;  // Prevents direction changes while trigger is pressed
-  bool locked_reverse_mode;  // Stores the reverse mode state when trigger was pressed
+  bool direction_locked;    // Prevents direction changes while trigger is pressed
+  bool locked_reverse_mode; // Stores the reverse mode state when trigger was pressed
 
 private:
   // Helper methods
