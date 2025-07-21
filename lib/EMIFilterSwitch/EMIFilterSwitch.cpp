@@ -1,17 +1,15 @@
 #include "EMIFilterSwitch.h"
 
-EMIFilterSwitch::EMIFilterSwitch(const SwitchConfig& config)
+EMIFilterSwitch::EMIFilterSwitch(const SwitchConfig &config)
+    : debounce_time(config.debounce_time),
+      filter_samples(config.filter_samples),
+      current_state(LOW),
+      filtered_state(LOW),
+      last_change(0),
+      reading_index(0),
+      initialized(false),
+      state_changed(false)
 {
-  debounce_time = config.debounce_time;
-  filter_samples = config.filter_samples;
-
-  current_state = LOW;
-  filtered_state = LOW;
-  last_change = 0;
-  reading_index = 0;
-  initialized = false;
-  state_changed = false;
-
   // Allocate memory for readings array
   readings = new int[filter_samples];
   for (int i = 0; i < filter_samples; i++)
@@ -73,7 +71,7 @@ void EMIFilterSwitch::updateFilteredState()
 {
   int high_count = countHighReadings();
   int new_filtered_state = (high_count == filter_samples) ? HIGH : LOW;
-  
+
   if (hasStateChanged(new_filtered_state) && isDebounceTimeElapsed())
   {
     state_changed = true;
@@ -81,7 +79,7 @@ void EMIFilterSwitch::updateFilteredState()
     filtered_state = new_filtered_state;
     return;
   }
-  
+
   state_changed = false;
 }
 
